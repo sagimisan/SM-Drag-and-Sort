@@ -1,180 +1,88 @@
-# react-native-drag-sort
-Drag and drop sort control for react-native
+# SM-Drag-and-Sort (SM-DS)
+Modern Drag and Drop sort control for React Native (Function Components + TypeScript).
 
-![GitHub license](https://img.shields.io/badge/license-MIT-green.svg)
-[![npm](https://img.shields.io/npm/v/react-native-drag-sort.svg?style=flat)](https://npmjs.com/package/react-native-drag-sort)
+This is a modernized and optimized version of `react-native-drag-sort`, focusing on the **AnySizeDragSortableView** with smooth FLIP animations and support for dynamic item sizes.
 
-### Version Iteration
-- [English Version Iteration](https://github.com/mochixuan/react-native-drag-sort/blob/master/README_History.md) 
-- [中文版本迭代](https://github.com/mochixuan/react-native-drag-sort/blob/master/README_ZH_History.md)
+## Features
+- ✅ **Function Components & Hooks**: Fully rewritten using modern React patterns.
+- ✅ **TypeScript**: Strongly typed props and state for better DX.
+- ✅ **AnySize Support**: Handle items with different widths and heights in the same grid.
+- ✅ **Smooth Animations**: Full FLIP (Snapshot -> Invert -> Play) animations using `Animated` API.
+- ✅ **RTL Support**: Native support for Hebrew and other Right-to-Left layouts.
+- ✅ **SDK Ready**: Logic separated into custom hooks (`useAnySizeDragSort`) for maximum flexibility.
 
-
-### Installation
+## Installation
 
 ```bash
-yarn add react-native-drag-sort
-or
-npm i react-native-drag-sort --save 
-
-export { DragSortableView, AutoDragSortableView, AnySizeDragSortableView }
+# In your project
+npm install react-native-safe-area-context
+# Copy the lib/ directory to your project
 ```
 
-### Tip
+## Quick Start (Mobile App Example)
 
-> Use priority: DragSortableView > AutoDragSortableView > AnySizeDragSortableView
+We've provided a complete example app built with **Expo**.
 
-- 1、If the width and height are fixed and there is no need to slide, use DragSortableView.
-- 2、If the width and height are fixed and you need to slide, use AutoDragSortableView.
-- 3、If the width and height are arbitrary and need to slide, please use AnySizeDragSortableView.
-
-### Performance（GIF）
-
-[AnyThreePage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/AnyThreePage.js) | [AnyThreePage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/AnyThreePage.js)
-| ------ | ----------- | 
-![Anysize](https://github.com/mochixuan/react-native-drag-sort/blob/master/img/any1.gif?raw=true) | ![Anysize](https://github.com/mochixuan/react-native-drag-sort/blob/master/img/any2.gif?raw=true)
-
-[AutomaticSlidingOnePage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/AutomaticSlidingOnePage.js) | [AutomaticSlidingThreePage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/AutomaticSlidingThreePage.js)
-| ------ | ----------- | 
-| ![](https://p1-jj.byteimg.com/tos-cn-i-t2oaga2asx/gold-user-assets/2020/2/15/170487f5ce137e15~tplv-t2oaga2asx-image.image) | ![](https://p1-jj.byteimg.com/tos-cn-i-t2oaga2asx/gold-user-assets/2020/2/15/1704896e0729f8b7~tplv-t2oaga2asx-image.image) 
-
-[ScrollFixedAddPage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/ScrollFixedAddPage.js) | [DragDeletePage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/DragDeletePage.js)  
-| ------ | ----------- |
-| ![](https://p1-jj.byteimg.com/tos-cn-i-t2oaga2asx/gold-user-assets/2020/2/10/1702ea81299f097d~tplv-t2oaga2asx-image.image)  | ![dragdelete.gif](https://upload-images.jianshu.io/upload_images/2646598-4d22ddb8f92a6563.gif?imageMogr2/auto-orient/strip)  
-
-
-[SortAndFixedPage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/SortAndFixedPage.js)  | [OneRowsPage](https://github.com/mochixuan/react-native-drag-sort/blob/master/Example/app/container/OneRowsPage.js)  
-| ------ | ----------- | 
-| ![ezgif.com-resize.gif](https://upload-images.jianshu.io/upload_images/2646598-405b01d61547c972.gif?imageMogr2/auto-orient/strip)  | ![one-line.gif](https://upload-images.jianshu.io/upload_images/2646598-dd17c76291514316.gif?imageMogr2/auto-orient/strip)  
-
-### API
-
-#### AutoDragSortableView、DragSortableView
-
-isRequired if there is a * in the name field
-
-|name|Proptypes|Description|
-----|----|-----|
-|**dataSource** *|array|
-|**parentWidth**|number|parent width
-|**childrenHeight** *|number|Each item height
-|**childrenWidth** *|number|Each item width
-|**marginChildrenTop**|number|So the item's outermost view adds margin, you can only use this method.
-|**marginChildrenBottom**|number
-|**marginChildrenLeft**|number
-|**marginChildrenRight**|number
-|**sortable**|bool|Do not allow dragging
-|**onClickItem**|func|click
-|**onDragStart**|func
-|**onDragEnd**|func
-|**onDataChange**|func|This method is called every time the data changes.
-|**renderItem** *|func|render item view
-|**fixedItems**|array|no remove
-|**keyExtractor**|func|(item,index) => key
-|**delayLongPress**|number
-|**isDragFreely**|bool|Whether to limit the drag space
-|**onDragging**|func
-|**maxScale**|number
-|**minOpacity**|number
-
-#### The following attributes belong only to AutoDragSortableView
-
-|name|Proptypes|Description|
-----|----|-----|
-|**scaleDuration**|number
-|**slideDuration**|number
-|**autoThrottle**|number
-|**autoThrottleDuration**|number
-|**renderHeaderView**|element
-|**headerViewHeight**|number
-|**scrollIndicatorInsets**|({top:number, left:number, bottom:number, right:number})|
-|**renderBottomView**|element
-|**bottomViewHeight**|number
-|**onScrollListener** | (event: NativeSyntheticEvent<NativeScrollEvent>) => void 
-|**onScrollRef** | (ref: any) => void
-
-##### AnySizeDragSortableView
-
-|name|Proptypes|Description|
-----|----|-----|
-|**dataSource** *|array|
-|**keyExtractor**|func.isRequired|(item,index) => key
-|**renderItem** *|func|render item view
-|**onDataChange**|func|This method is called every time the data changes.
-|**renderHeaderView**|element
-|**headerViewHeight**|number
-|**renderBottomView**|element
-|**bottomViewHeight**|number
-|**autoThrottle**|number
-|**autoThrottleDuration**|number
-|**onDragEnd**|func
-|**scrollIndicatorInsets**|({top:number, left:number, bottom:number, right:number})|
-|**onScrollListener** | (event: NativeSyntheticEvent<NativeScrollEvent>) => void 
-|**onScrollRef** | (ref: any) => void
-|**areaOverlapRatio**|number| Must be greater than 0.5
-|**movedWrapStyle**| StyleProp<ViewStyle> |style
-|**childMarginTop**|number
-|**childMarginBottom**|number
-|**childMarginLeft**|number
-|**childMarginRight**|number
-
-### Example
-
-```jsx
-<DragSortableView
-    dataSource={this.state.data}
-    parentWidth={parentWidth}
-    childrenWidth= {childrenWidth}
-    childrenHeight={childrenHeight}
-    keyExtractor={(item,index)=> item.id}
-    renderItem={(item,index)=>{
-        return this.renderItem(item,index)
-    }}
-/>
-    
-<AutoDragSortableView
-    dataSource={this.state.data}
-    parentWidth={parentWidth}
-    childrenWidth= {childrenWidth}
-    childrenHeight={childrenHeight}
-    keyExtractor={(item,index)=> item.id}
-    renderItem={(item,index)=>{
-        return this.renderItem(item,index)
-    }}
-/>
-
-// ====== AnySizeDragSortableView start =======
-
-constructor(props) {
-    super(props);
-    this.sortableViewRef = createRef()
-}
-
-<AnySizeDragSortableView
-    ref={this.sortableViewRef}
-    dataSource={items}
-    keyExtractor={(item) => item.text} // 1、isRequired
-    renderItem={this._renderItem}
-    onDataChange={(data, callback)=> {
-        this.setState({items: data},()=>{
-            callback() // isRequired
-        })
-    }}
-/>
-
-_renderItem = (item, index, isMoved) => {
-    return (
-    	<TouchableOpacity
-	        onLongPress={() => {
-	            this.sortableViewRef.current.startTouch(item, index) // 2、isRequired	        }}
-	        onPressOut = {() => {
-	        	this.sortableViewRef.current.onPressOut() 3、isRequired
-	        }}
-	      >
-      	<...>
-      </TouchableOpacity>
-    )
-}
-
-
-// ====== AnySizeDragSortableView end =======
+### 1. Navigate to the mobile app directory
+```bash
+cd mobile-app
 ```
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Run the app
+```bash
+npx expo start
+```
+Press **`r`** to reload, **`i`** for iOS simulator, or **`a`** for Android emulator.
+
+## Usage (SDK Style)
+
+You can use the library without modifying its source code. Just import it and pass your data and styles.
+
+```tsx
+import AnySizeDragSortableView from './lib/AnySizeDragSortableView';
+
+const MyComponent = () => {
+  const [items, setItems] = useState(data);
+
+  return (
+    <AnySizeDragSortableView
+      dataSource={items}
+      keyExtractor={(item) => item.id}
+      onDataChange={(newData, callback) => {
+        setItems(newData);
+        callback(); // Required to sync internal state
+      }}
+      renderItem={(item, index, isMoved) => (
+        <MyItemView item={item} isMoved={isMoved} />
+      )}
+      containerStyle={{
+        flexDirection: 'row-reverse', // For RTL
+        justifyContent: 'center',
+      }}
+    />
+  );
+};
+```
+
+## API
+
+### AnySizeDragSortableView Props
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| **dataSource** | `T[]` | Array of items to sort. |
+| **keyExtractor** | `(item, index) => string` | Unique key for each item. |
+| **renderItem** | `(item, index, isMoved) => ReactElement` | Custom renderer for items. |
+| **onDataChange** | `(data, callback) => void` | Called when a swap occurs. |
+| **containerStyle** | `ViewStyle` | Style for the grid container (e.g., `flexDirection`). |
+| **movedWrapStyle** | `ViewStyle` | Style for the item currently being dragged. |
+| **headerViewHeight** | `number` | Height of the optional header. |
+| **renderHeaderView** | `ReactElement` | Optional header component. |
+
+## Credits
+Original logic based on `react-native-drag-sort` by mochixuan. Optimized and modernized by SM-DS.

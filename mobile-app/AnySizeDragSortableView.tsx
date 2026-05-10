@@ -42,6 +42,9 @@ export interface AnySizeDragSortableViewProps<T> {
   childMarginBottom?: number;
   childMarginLeft?: number;
   childMarginRight?: number;
+  containerStyle?: ViewStyle;
+  contentContainerStyle?: ViewStyle;
+  style?: ViewStyle;
 }
 
 const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDragSortableViewProps<any>>((props, ref) => {
@@ -54,6 +57,9 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
     scrollIndicatorInsets = { top: 0, left: 0, bottom: 0, right: 1 },
     onScrollRef: onScrollRefProp,
     movedWrapStyle = { backgroundColor: 'blue', zIndex: 999 },
+    containerStyle,
+    contentContainerStyle,
+    style,
   } = props;
 
   const {
@@ -69,7 +75,7 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
   } = useAnySizeDragSort(props, ref);
 
   return (
-    <View style={styles.box}>
+    <View style={[styles.box, style]}>
       {selectedPosition && (
         <View
           style={[
@@ -96,10 +102,10 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
         }}
         scrollEnabled={scrollEnabled}
         onScroll={onScrollListener}
-        style={styles.scroll}
+        style={[styles.scroll, contentContainerStyle]}
       >
         {renderHeaderView}
-        <View style={styles.container}>
+        <View style={[styles.container, containerStyle]}>
           {dataSource.map((item, index) => {
             const key = keyExtractor(item, index);
             keyToIndexMap.current.set(key, index);
@@ -125,7 +131,7 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
 const styles = StyleSheet.create({
   box: { flex: 1, position: 'relative' },
   scroll: { flex: 1 },
-  container: { flex: 1, flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'center' }
+  container: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' }
 });
 
 export default AnySizeDragSortableView;

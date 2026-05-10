@@ -96,6 +96,7 @@ const App: React.FC = () => {
           bottomViewHeight={bottomViewHeight}
           movedWrapStyle={styles.item_moved}
           onDragEnd={onDragEnd}
+          containerStyle={styles.sortable_container}
         />
       </SafeAreaView>
     </SafeAreaProvider>
@@ -170,6 +171,10 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 24,
     fontWeight: 'bold'
+  },
+  sortable_container: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'center',
   },
   aheader: {
     height: headerViewHeight,
