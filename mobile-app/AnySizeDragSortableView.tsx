@@ -8,26 +8,91 @@ import React, {
   useMemo
 } from 'react';
 import {
-  NativeModules,
   StyleSheet,
   ScrollView,
   View,
   Animated,
   PanResponder,
   Platform,
-  UIManager
+  UIManager,
+  ViewStyle,
+  ScrollViewProps,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  GestureResponderEvent,
+  PanResponderGestureState,
+  LayoutChangeEvent
 } from 'react-native';
-import PropTypes from 'prop-types';
 
 const ANIM_DURATION = 150;
 
 if (Platform.OS === 'android') {
-  if (UIManager && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
+  if (UIManager && (UIManager as any).setLayoutAnimationEnabledExperimental) {
+    (UIManager as any).setLayoutAnimationEnabledExperimental(true);
   }
 }
 
-const AnySizeDragSortableView = forwardRef((props, ref) => {
+export interface AnySizeDragSortableViewRef {
+  startTouch: (item: any, index: number) => void;
+  onPressOut: () => void;
+  scrollTo: (height: number, animated?: boolean) => void;
+}
+
+interface LayoutData {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  key: string;
+}
+
+interface ScrollData {
+  totalHeight: number;
+  windowHeight: number;
+  offsetY: number;
+  hasScroll: boolean;
+}
+
+interface AutoObj {
+  curDy: number;
+  scrollDx: number;
+  scrollDy: number;
+  hasScrollDy: number | null;
+  forceScrollStatus: number;
+}
+
+interface SelectedPosition {
+  left: number;
+  top: number;
+  initTop: number;
+  width: number;
+  height: number;
+}
+
+export interface AnySizeDragSortableViewProps<T> {
+  dataSource: T[];
+  keyExtractor: (item: T, index: number) => string;
+  renderItem: (item: T, index: number | null, isMoved: boolean) => React.ReactElement;
+  onDataChange: (data: T[], callback: () => void) => void;
+  headerViewHeight?: number;
+  renderBottomView?: React.ReactElement | null;
+  bottomViewHeight?: number;
+  renderHeaderView?: React.ReactElement | null;
+  autoThrottle?: number;
+  onDragEnd?: () => void;
+  autoThrottleDuration?: number;
+  scrollIndicatorInsets?: ScrollViewProps['scrollIndicatorInsets'];
+  onScrollListener?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollRef?: (ref: ScrollView | null) => void;
+  areaOverlapRatio?: number;
+  movedWrapStyle?: ViewStyle;
+  childMarginTop?: number;
+  childMarginBottom?: number;
+  childMarginLeft?: number;
+  childMarginRight?: number;
+}
+
+const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDragSortableViewProps<any>>((props, ref) => {
   const {
     dataSource,
     keyExtractor,
@@ -51,41 +116,44 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
   } = props;
 
   // Refs for instance-like variables
-  const layoutMap = useRef(new Map());
-  const keyToIndexMap = useRef(new Map());
-  const animatedValues = useRef(new Map());
-  const prevLayoutSnapshot = useRef(new Map());
+  const layoutMap = useRef<Map<string, LayoutData>>(new Map());
+  const keyToIndexMap = useRef<Map<string, number>>(new Map());
+  const animatedValues = useRef<Map<string, Animated.ValueXY>>(new Map());
+  const prevLayoutSnapshot = useRef<Map<string, LayoutData>>(new Map());
   const isSwapping = useRef(false);
   const isUpdating = useRef(false);
   const isHasMove = useRef(false);
   const isHasMeasure = useRef(false);
-  const preMoveKeyObj = useRef(null);
-  const preGestureState = useRef(null);
-  const autoInterval = useRef(null);
-  const curScrollData = useRef(null);
-  const autoObj = useRef({
+  const preMoveKeyObj = useRef<{ fromKey: string; toKey: string } | null>(null);
+  const preGestureState = useRef<PanResponderGestureState | null>(null);
+  const autoInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const curScrollData = useRef<ScrollData | null>(null);
+  const autoObj = useRef<AutoObj>({
     curDy: 0,
     scrollDx: 0,
     scrollDy: 0,
     hasScrollDy: null,
     forceScrollStatus: 0,
   });
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<ScrollView | null>(null);
   const isMovePanResponder = useRef(false);
-  const isScaleRecovery = useRef(null);
+  const isScaleRecovery = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const moveTouchRef = useRef<((nativeEvent: GestureResponderEvent | null, gestureState: PanResponderGestureState) => void) | null>(null);
+  const endTouchRef = useRef<(() => void) | null>(null);
 
   // State
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedKey, setSelectedKey] = useState(null);
-  const [selectedOriginLayout, setSelectedOriginLayout] = useState(null);
-  const [selectedPosition, setSelectedPosition] = useState(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedOriginLayout, setSelectedOriginLayout] = useState<LayoutData | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<SelectedPosition | null>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
 
-  const getAnimatedValue = useCallback((key) => {
+  const getAnimatedValue = useCallback((key: string) => {
     if (!animatedValues.current.has(key)) {
       animatedValues.current.set(key, new Animated.ValueXY({ x: 0, y: 0 }));
     }
-    return animatedValues.current.get(key);
+    return animatedValues.current.get(key)!;
   }, []);
 
   const clearAutoInterval = useCallback(() => {
@@ -106,7 +174,7 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     };
   }, [clearAutoInterval]);
 
-  const scrollTo = useCallback((height, animated = true) => {
+  const scrollTo = useCallback((height: number, animated = true) => {
     if (curScrollData.current) {
       if (autoObj.current.forceScrollStatus < 0 && curScrollData.current.offsetY <= 0) {
         autoObj.current.scrollDy = 0;
@@ -138,11 +206,11 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     }
   }, []);
 
-  const move = useCallback((fromKey, toKey, vy, isDiffline) => {
+  const move = useCallback((fromKey: string, toKey: string, vy: number, isDiffline: boolean) => {
     isUpdating.current = true;
     const length = dataSource.length;
-    const fromIndex = keyToIndexMap.current.get(fromKey);
-    const toIndex = keyToIndexMap.current.get(toKey);
+    const fromIndex = keyToIndexMap.current.get(fromKey) ?? -1;
+    const toIndex = keyToIndexMap.current.get(toKey) ?? -1;
 
     if (fromIndex < 0 || fromIndex >= length || toIndex < 0 || toIndex >= length) {
       isUpdating.current = false;
@@ -181,18 +249,56 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     });
   }, [dataSource, onDataChange]);
 
-  const moveTouch = useCallback((nativeEvent, gestureState) => {
+  const startAutoScroll = useCallback(() => {
+    if (autoInterval.current != null) return;
+    autoInterval.current = setInterval(() => {
+      if (
+        autoObj.current.forceScrollStatus === 0 ||
+        autoObj.current.forceScrollStatus === 2 ||
+        autoObj.current.forceScrollStatus === -2
+      ) {
+        clearAutoInterval();
+        return;
+      }
+      if (!curScrollData.current?.hasScroll) return;
+
+      if (autoObj.current.forceScrollStatus === 1) {
+        autoObj.current.scrollDy = autoObj.current.scrollDy + autoThrottle;
+      } else if (autoObj.current.forceScrollStatus === -1) {
+        autoObj.current.scrollDy = autoObj.current.scrollDy - autoThrottle;
+      }
+
+      scrollTo(autoObj.current.scrollDy, false);
+      dealtScrollStatus();
+
+      const moveParams: PanResponderGestureState = {
+        ...(preGestureState.current || {} as PanResponderGestureState),
+        dx: autoObj.current.scrollDx,
+        dy: autoObj.current.curDy + autoObj.current.scrollDy,
+      };
+
+      if (Platform.OS === 'android') {
+        setTimeout(() => {
+          if (isHasMove.current && moveTouchRef.current) moveTouchRef.current(null, moveParams);
+        }, 1);
+      } else {
+        if (moveTouchRef.current) moveTouchRef.current(null, moveParams);
+      }
+    }, autoThrottleDuration);
+  }, [autoThrottle, autoThrottleDuration, clearAutoInterval, dealtScrollStatus, scrollTo]);
+
+  const moveTouch = useCallback((nativeEvent: GestureResponderEvent | null, gestureState: PanResponderGestureState) => {
     isHasMove.current = true;
     if (nativeEvent) {
       preGestureState.current = gestureState;
     }
 
-    if (!selectedOriginLayout) return;
+    if (!selectedOriginLayout || !selectedPosition || !selectedKey) return;
 
     let { dx, dy, vy, moveY, y0 } = gestureState;
 
-    if (isStartupAuto()) {
-      const curDis = selectedOriginLayout.y + dy - autoObj.current.hasScrollDy;
+    if (isStartupAuto() && curScrollData.current) {
+      const curDis = selectedOriginLayout.y + dy - (autoObj.current.hasScrollDy || 0);
       if (nativeEvent != null) {
         const tempStatus = autoObj.current.forceScrollStatus;
         const minDownDiss = curDis + selectedPosition.height + headerViewHeight;
@@ -218,7 +324,7 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
       }
 
       autoObj.current.scrollDx = dx;
-      dy = dy - autoObj.current.hasScrollDy;
+      dy = dy - (autoObj.current.hasScrollDy || 0);
       if (nativeEvent != null) {
         dy = dy + autoObj.current.scrollDy;
         if (autoObj.current.forceScrollStatus === 1 || autoObj.current.forceScrollStatus === -1) {
@@ -237,7 +343,7 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
         const nextLineY = curLayout.y + curLayout.height;
         const moveArea = selectedOriginLayout.width * selectedOriginLayout.height;
 
-        let nextLineLastLayout = null;
+        let nextLineLastLayout: LayoutData | null = null;
         for (let layout of layoutMap.current.values()) {
           const tempX1 = layout.x + childMarginLeft;
           const tempX2 = tempX1 + layout.width - childMarginRight;
@@ -271,7 +377,7 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
 
         if (!isUpdating.current) {
           const moveCenterY = (moveY1 + moveY2) / 2;
-          let closestRowLastItem = null;
+          let closestRowLastItem: LayoutData | null = null;
           for (let layout of layoutMap.current.values()) {
             if (layout.key === curLayout.key) continue;
             if (moveCenterY >= layout.y && moveCenterY <= layout.y + layout.height) {
@@ -287,55 +393,17 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
       }
     }
 
-    const nextLeft = parseInt(selectedOriginLayout.x + dx + 0.5);
-    const nextTop = parseInt(selectedPosition.initTop + (moveY - y0) + 0.5);
+    const nextLeft = parseInt(String(selectedOriginLayout.x + dx + 0.5));
+    const nextTop = parseInt(String(selectedPosition.initTop + (moveY - y0) + 0.5));
 
     if (selectedPosition.left !== nextLeft || selectedPosition.top !== nextTop) {
-      setSelectedPosition((prev) => ({
+      setSelectedPosition((prev) => prev ? ({
         ...prev,
         left: nextLeft,
         top: nextTop
-      }));
+      }) : null);
     }
   }, [selectedOriginLayout, selectedPosition, headerViewHeight, startAutoScroll, isStartupAuto, selectedKey, childMarginLeft, childMarginRight, childMarginTop, childMarginBottom, areaOverlapRatio, move]);
-
-  const startAutoScroll = useCallback(() => {
-    if (autoInterval.current != null) return;
-    autoInterval.current = setInterval(() => {
-      if (
-        autoObj.current.forceScrollStatus === 0 ||
-        autoObj.current.forceScrollStatus === 2 ||
-        autoObj.current.forceScrollStatus === -2
-      ) {
-        clearAutoInterval();
-        return;
-      }
-      if (!curScrollData.current.hasScroll) return;
-
-      if (autoObj.current.forceScrollStatus === 1) {
-        autoObj.current.scrollDy = autoObj.current.scrollDy + autoThrottle;
-      } else if (autoObj.current.forceScrollStatus === -1) {
-        autoObj.current.scrollDy = autoObj.current.scrollDy - autoThrottle;
-      }
-
-      scrollTo(autoObj.current.scrollDy, false);
-      dealtScrollStatus();
-
-      const moveParams = {
-        ...(preGestureState.current || {}),
-        dx: autoObj.current.scrollDx,
-        dy: autoObj.current.curDy + autoObj.current.scrollDy,
-      };
-
-      if (Platform.OS === 'android') {
-        setTimeout(() => {
-          if (isHasMove.current) moveTouch(null, moveParams);
-        }, 1);
-      } else {
-        moveTouch(null, moveParams);
-      }
-    }, autoThrottleDuration);
-  }, [autoThrottle, autoThrottleDuration, clearAutoInterval, dealtScrollStatus, moveTouch, scrollTo]);
 
   const endTouch = useCallback(() => {
     isHasMove.current = false;
@@ -348,24 +416,25 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     setScrollEnabled(true);
   }, [initTag, onDragEnd]);
 
-  const startTouch = useCallback((item, index) => {
+  const startTouch = useCallback((item: any, index: number) => {
     isHasMove.current = false;
     isHasMeasure.current = true;
     preMoveKeyObj.current = null;
     if (isStartupAuto()) {
-      autoObj.current.scrollDy = autoObj.current.hasScrollDy = curScrollData.current.offsetY;
+      autoObj.current.scrollDy = autoObj.current.hasScrollDy = curScrollData.current?.offsetY || 0;
     }
     const key = keyExtractor(item, index);
     const curLayout = layoutMap.current.get(key);
+    if (!curLayout) return;
     const firstOffsetY = curScrollData.current?.offsetY || 0;
-    const initTop = parseInt(curLayout.y - firstOffsetY + headerViewHeight + 0.5);
+    const initTop = parseInt(String(curLayout.y - firstOffsetY + headerViewHeight + 0.5));
 
     setScrollEnabled(false);
     setSelectedItem(item);
     setSelectedKey(key);
     setSelectedOriginLayout({ ...curLayout });
     setSelectedPosition({
-      left: parseInt(curLayout.x + 0.5),
+      left: parseInt(String(curLayout.x + 0.5)),
       top: initTop,
       initTop,
       width: curLayout.width,
@@ -382,22 +451,27 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     }, 220);
   }, [endTouch]);
 
-  const _panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => {
-        isMovePanResponder.current = false;
-        return false;
-      },
-      onMoveShouldSetPanResponder: () => isMovePanResponder.current,
-      onMoveShouldSetPanResponderCapture: () => isMovePanResponder.current,
-      onPanResponderGrant: () => {},
-      onPanResponderMove: (evt, gestureState) => moveTouch(evt, gestureState),
-      onPanResponderRelease: () => endTouch(),
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => false,
-    })
-  ).current;
+  moveTouchRef.current = moveTouch;
+  endTouchRef.current = endTouch;
+
+  const _panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => {
+          isMovePanResponder.current = false;
+          return false;
+        },
+        onMoveShouldSetPanResponder: () => isMovePanResponder.current,
+        onMoveShouldSetPanResponderCapture: () => isMovePanResponder.current,
+        onPanResponderGrant: () => {},
+        onPanResponderMove: (evt, gestureState) => moveTouchRef.current?.(evt, gestureState),
+        onPanResponderRelease: () => endTouchRef.current?.(),
+        onPanResponderTerminationRequest: () => false,
+        onShouldBlockNativeResponder: () => false,
+      }),
+    []
+  );
 
   useImperativeHandle(ref, () => ({
     startTouch,
@@ -419,7 +493,7 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     };
   }, [initTag, scrollTo, clearAutoInterval]);
 
-  const _setLayoutData = useCallback((key, event) => {
+  const _setLayoutData = useCallback((key: string, event: LayoutChangeEvent) => {
     const newLayout = { ...event.nativeEvent.layout, key };
     layoutMap.current.set(key, newLayout);
 
@@ -442,7 +516,7 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     }
   }, [getAnimatedValue]);
 
-  const onScrollListener = useCallback((event) => {
+  const onScrollListener = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const nativeEvent = event.nativeEvent;
     curScrollData.current = {
       totalHeight: nativeEvent.contentSize.height,
@@ -507,34 +581,6 @@ const AnySizeDragSortableView = forwardRef((props, ref) => {
     </View>
   );
 });
-
-AnySizeDragSortableView.propTypes = {
-  dataSource: PropTypes.array.isRequired,
-  keyExtractor: PropTypes.func.isRequired,
-  renderItem: PropTypes.func.isRequired,
-  onDataChange: PropTypes.func,
-  headerViewHeight: PropTypes.number,
-  renderBottomView: PropTypes.element,
-  bottomViewHeight: PropTypes.number,
-  renderHeaderView: PropTypes.element,
-  autoThrottle: PropTypes.number,
-  onDragEnd: PropTypes.func,
-  autoThrottleDuration: PropTypes.number,
-  scrollIndicatorInsets: PropTypes.shape({
-    top: PropTypes.number,
-    left: PropTypes.number,
-    bottom: PropTypes.number,
-    right: PropTypes.number,
-  }),
-  onScrollListener: PropTypes.func,
-  onScrollRef: PropTypes.func,
-  areaOverlapRatio: PropTypes.number,
-  movedWrapStyle: PropTypes.object,
-  childMarginTop: PropTypes.number,
-  childMarginBottom: PropTypes.number,
-  childMarginLeft: PropTypes.number,
-  childMarginRight: PropTypes.number
-};
 
 const styles = StyleSheet.create({
   box: { flex: 1, position: 'relative' },

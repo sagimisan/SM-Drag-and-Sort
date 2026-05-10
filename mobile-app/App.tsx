@@ -8,13 +8,19 @@ import {
   Dimensions,
   SafeAreaView
 } from 'react-native';
-import AnySizeDragSortableView from './AnySizeDragSortableView';
+import AnySizeDragSortableView, { AnySizeDragSortableViewRef } from './AnySizeDragSortableView';
 
 const { width } = Dimensions.get('window');
 const headerViewHeight = 160;
 const bottomViewHeight = 40;
 
-const getW = (index, isWidth) => {
+interface ItemData {
+  text: string;
+  width: number;
+  height: number;
+}
+
+const getW = (index: number, isWidth: boolean): number => {
   if (isWidth) {
     return index % 3 === 0 ? width - 40 : (width - 60) / 2;
   } else {
@@ -22,9 +28,9 @@ const getW = (index, isWidth) => {
   }
 };
 
-const App = () => {
+const App: React.FC = () => {
   const initialItems = useMemo(() => {
-    const arr = [];
+    const arr: ItemData[] = [];
     for (let i = 0; i < 26; i++) {
       arr.push({
         text: String.fromCharCode(65 + i),
@@ -35,11 +41,11 @@ const App = () => {
     return arr;
   }, []);
 
-  const [items, setItems] = useState(initialItems);
-  const [movedKey, setMovedKey] = useState(null);
-  const sortableViewRef = useRef(null);
+  const [items, setItems] = useState<ItemData[]>(initialItems);
+  const [movedKey, setMovedKey] = useState<string | null>(null);
+  const sortableViewRef = useRef<AnySizeDragSortableViewRef>(null);
 
-  const onDeleteItem = useCallback((index) => {
+  const onDeleteItem = useCallback((index: number) => {
     setItems((prevItems) => {
       const nextItems = [...prevItems];
       nextItems.splice(index, 1);
@@ -47,18 +53,18 @@ const App = () => {
     });
   }, []);
 
-  const renderItem = useCallback((item, index, isMoved) => {
+  const renderItem = useCallback((item: ItemData, index: number | null, isMoved: boolean) => {
     return (
       <TouchableOpacity
         onLongPress={() => {
           setMovedKey(item.text);
-          sortableViewRef.current?.startTouch(item, index);
+          sortableViewRef.current?.startTouch(item, index!);
         }}
         onPressOut={() => sortableViewRef.current?.onPressOut()}
       >
         <View style={[styles.item_wrap, { opacity: movedKey === item.text && !isMoved ? 1 : 1 }]}>
           <View style={styles.item_clear_wrap}>
-            <TouchableOpacity onPress={() => onDeleteItem(index)}>
+            <TouchableOpacity onPress={() => onDeleteItem(index!)}>
               <Image source={require('./assets/img/clear.png')} style={styles.item_clear} />
             </TouchableOpacity>
           </View>
