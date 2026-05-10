@@ -11,38 +11,32 @@ This is a modernized and optimized version of `react-native-drag-sort`, focusing
 - ✅ **RTL Support**: Native support for Hebrew and other Right-to-Left layouts.
 - ✅ **SDK Ready**: Logic separated into custom hooks (`useAnySizeDragSort`) for maximum flexibility.
 
-## Installation
+## Quick Start (Demo App)
+The provided demo app is fully configured and ready to go. Just run:
 
-```bash
-# In your project
-npm install react-native-safe-area-context
-# Copy the lib/ directory to your project
-```
-
-## Quick Start (Mobile App Example)
-
-We've provided a complete example app built with **Expo**.
-
-### 1. Navigate to the mobile app directory
 ```bash
 cd mobile-app
-```
-
-### 2. Install dependencies
-```bash
 npm install
-```
-
-### 3. Run the app
-```bash
 npx expo start
 ```
-Press **`r`** to reload, **`i`** for iOS simulator, or **`a`** for Android emulator.
+This will automatically install all dependencies, including the library logic.
 
-## Usage (SDK Style)
+## Manual Integration (SDK Usage)
+If you want to use this component in your **own existing project**:
 
-You can use the library without modifying its source code. Just import it and pass your data and styles.
+1. **Add Dependencies**:
+   Ensure you have the required peer dependencies in your project:
+   ```bash
+   npm install react-native-safe-area-context
+   ```
 
+2. **Import the Library**:
+   Since this is a local SDK, simply copy the `lib/` directory into your project's folder and import the component:
+   ```tsx
+   import AnySizeDragSortableView from './lib/AnySizeDragSortableView';
+   ```
+
+## Usage Example
 ```tsx
 import AnySizeDragSortableView from './lib/AnySizeDragSortableView';
 
