@@ -1,36 +1,17 @@
-import React, {
-  useRef,
-  useState,
-  useCallback,
-  useImperativeHandle,
-  forwardRef,
-  useEffect,
-  useMemo
-} from 'react';
+import { useRef, useState, useCallback, useImperativeHandle, useEffect, useMemo } from 'react';
 import {
-  StyleSheet,
-  ScrollView,
-  View,
   Animated,
   PanResponder,
   Platform,
-  UIManager,
-  ViewStyle,
-  ScrollViewProps,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   GestureResponderEvent,
   PanResponderGestureState,
-  LayoutChangeEvent
+  LayoutChangeEvent,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  ScrollView,
 } from 'react-native';
 
 const ANIM_DURATION = 150;
-
-if (Platform.OS === 'android') {
-  if (UIManager && (UIManager as any).setLayoutAnimationEnabledExperimental) {
-    (UIManager as any).setLayoutAnimationEnabledExperimental(true);
-  }
-}
 
 export interface AnySizeDragSortableViewRef {
   startTouch: (item: any, index: number) => void;
@@ -38,7 +19,7 @@ export interface AnySizeDragSortableViewRef {
   scrollTo: (height: number, animated?: boolean) => void;
 }
 
-interface LayoutData {
+export interface LayoutData {
   x: number;
   y: number;
   width: number;
@@ -46,14 +27,14 @@ interface LayoutData {
   key: string;
 }
 
-interface ScrollData {
+export interface ScrollData {
   totalHeight: number;
   windowHeight: number;
   offsetY: number;
   hasScroll: boolean;
 }
 
-interface AutoObj {
+export interface AutoObj {
   curDy: number;
   scrollDx: number;
   scrollDy: number;
@@ -61,7 +42,7 @@ interface AutoObj {
   forceScrollStatus: number;
 }
 
-interface SelectedPosition {
+export interface SelectedPosition {
   left: number;
   top: number;
   initTop: number;
@@ -69,53 +50,40 @@ interface SelectedPosition {
   height: number;
 }
 
-export interface AnySizeDragSortableViewProps<T> {
+interface UseAnySizeDragSortProps<T> {
   dataSource: T[];
   keyExtractor: (item: T, index: number) => string;
-  renderItem: (item: T, index: number | null, isMoved: boolean) => React.ReactElement;
   onDataChange: (data: T[], callback: () => void) => void;
   headerViewHeight?: number;
-  renderBottomView?: React.ReactElement | null;
-  bottomViewHeight?: number;
-  renderHeaderView?: React.ReactElement | null;
   autoThrottle?: number;
-  onDragEnd?: () => void;
   autoThrottleDuration?: number;
-  scrollIndicatorInsets?: ScrollViewProps['scrollIndicatorInsets'];
-  onScrollListener?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  onScrollRef?: (ref: ScrollView | null) => void;
   areaOverlapRatio?: number;
-  movedWrapStyle?: ViewStyle;
   childMarginTop?: number;
   childMarginBottom?: number;
   childMarginLeft?: number;
   childMarginRight?: number;
+  onDragEnd?: () => void;
+  onScrollListener?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDragSortableViewProps<any>>((props, ref) => {
+export const useAnySizeDragSort = <T,>(props: UseAnySizeDragSortProps<T>, ref: React.Ref<any>) => {
   const {
     dataSource,
     keyExtractor,
-    renderItem,
     onDataChange,
     headerViewHeight = 0,
-    renderBottomView,
-    renderHeaderView,
     autoThrottle = 2,
     autoThrottleDuration = 10,
     areaOverlapRatio = 0.25,
-    movedWrapStyle = { backgroundColor: 'blue', zIndex: 999 },
     childMarginTop = 10,
     childMarginBottom = 10,
     childMarginLeft = 10,
     childMarginRight = 10,
     onDragEnd,
     onScrollListener: onScrollListenerProp,
-    onScrollRef: onScrollRefProp,
-    scrollIndicatorInsets = { top: 0, left: 0, bottom: 0, right: 1 }
   } = props;
 
-  // Refs for instance-like variables
+  // Refs
   const layoutMap = useRef<Map<string, LayoutData>>(new Map());
   const keyToIndexMap = useRef<Map<string, number>>(new Map());
   const animatedValues = useRef<Map<string, Animated.ValueXY>>(new Map());
@@ -143,7 +111,7 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
   const endTouchRef = useRef<(() => void) | null>(null);
 
   // State
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<T | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [selectedOriginLayout, setSelectedOriginLayout] = useState<LayoutData | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<SelectedPosition | null>(null);
@@ -233,7 +201,6 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
     const newDataSource = [...dataSource];
     const deleteItem = newDataSource.splice(fromIndex, 1);
 
-    // Snapshot
     prevLayoutSnapshot.current = new Map();
     for (let [key, layout] of layoutMap.current) {
       prevLayoutSnapshot.current.set(key, { ...layout });
@@ -416,7 +383,7 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
     setScrollEnabled(true);
   }, [initTag, onDragEnd]);
 
-  const startTouch = useCallback((item: any, index: number) => {
+  const startTouch = useCallback((item: T, index: number) => {
     isHasMove.current = false;
     isHasMeasure.current = true;
     preMoveKeyObj.current = null;
@@ -528,64 +495,15 @@ const AnySizeDragSortableView = forwardRef<AnySizeDragSortableViewRef, AnySizeDr
     onScrollListenerProp?.(event);
   }, [onScrollListenerProp]);
 
-  return (
-    <View style={styles.box}>
-      {selectedPosition && (
-        <View
-          style={[
-            movedWrapStyle,
-            {
-              left: selectedPosition.left,
-              top: selectedPosition.top,
-              position: 'absolute',
-              zIndex: 999,
-              transform: [{ scale: 1.1 }]
-            }
-          ]}
-        >
-          {renderItem(selectedItem, null, true)}
-        </View>
-      )}
-      <ScrollView
-        bounces={false}
-        scrollEventThrottle={1}
-        scrollIndicatorInsets={scrollIndicatorInsets}
-        ref={(r) => {
-          scrollRef.current = r;
-          onScrollRefProp?.(r);
-        }}
-        scrollEnabled={scrollEnabled}
-        onScroll={onScrollListener}
-        style={styles.scroll}
-      >
-        {renderHeaderView}
-        <View style={styles.container}>
-          {dataSource.map((item, index) => {
-            const key = keyExtractor(item, index);
-            keyToIndexMap.current.set(key, index);
-            const animValue = getAnimatedValue(key);
-            return (
-              <Animated.View
-                key={key}
-                style={{ transform: animValue.getTranslateTransform() }}
-                {..._panResponder.panHandlers}
-                onLayout={(event) => _setLayoutData(key, event)}
-              >
-                {renderItem(item, index, false)}
-              </Animated.View>
-            );
-          })}
-        </View>
-        {renderBottomView}
-      </ScrollView>
-    </View>
-  );
-});
-
-const styles = StyleSheet.create({
-  box: { flex: 1, position: 'relative' },
-  scroll: { flex: 1 },
-  container: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' }
-});
-
-export default AnySizeDragSortableView;
+  return {
+    selectedItem,
+    selectedPosition,
+    scrollEnabled,
+    keyToIndexMap,
+    getAnimatedValue,
+    _panResponder,
+    _setLayoutData,
+    onScrollListener,
+    scrollRef
+  };
+};

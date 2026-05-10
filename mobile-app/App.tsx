@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -6,63 +6,34 @@ import {
   View,
   Image,
   Dimensions,
-  SafeAreaView
 } from 'react-native';
-import AnySizeDragSortableView, { AnySizeDragSortableViewRef } from './AnySizeDragSortableView';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import AnySizeDragSortableView from './AnySizeDragSortableView';
+import { useAppLogic, ItemData } from './useAppLogic';
 
 const { width } = Dimensions.get('window');
-const headerViewHeight = 160;
+const headerViewHeight = 180;
 const bottomViewHeight = 40;
 
-interface ItemData {
-  text: string;
-  width: number;
-  height: number;
-}
-
-const getW = (index: number, isWidth: boolean): number => {
-  if (isWidth) {
-    return index % 3 === 0 ? width - 40 : (width - 60) / 2;
-  } else {
-    return 70 + (index % 5) * 40;
-  }
-};
-
 const App: React.FC = () => {
-  const initialItems = useMemo(() => {
-    const arr: ItemData[] = [];
-    for (let i = 0; i < 26; i++) {
-      arr.push({
-        text: String.fromCharCode(65 + i),
-        width: getW(i, true),
-        height: getW(i, false)
-      });
-    }
-    return arr;
-  }, []);
-
-  const [items, setItems] = useState<ItemData[]>(initialItems);
-  const [movedKey, setMovedKey] = useState<string | null>(null);
-  const sortableViewRef = useRef<AnySizeDragSortableViewRef>(null);
-
-  const onDeleteItem = useCallback((index: number) => {
-    setItems((prevItems) => {
-      const nextItems = [...prevItems];
-      nextItems.splice(index, 1);
-      return nextItems;
-    });
-  }, []);
+  const {
+    items,
+    setItems,
+    movedKey,
+    sortableViewRef,
+    onDeleteItem,
+    handleLongPress,
+    handlePressOut,
+    onDragEnd
+  } = useAppLogic();
 
   const renderItem = useCallback((item: ItemData, index: number | null, isMoved: boolean) => {
     return (
       <TouchableOpacity
-        onLongPress={() => {
-          setMovedKey(item.text);
-          sortableViewRef.current?.startTouch(item, index!);
-        }}
-        onPressOut={() => sortableViewRef.current?.onPressOut()}
+        onLongPress={() => handleLongPress(item, index!)}
+        onPressOut={handlePressOut}
       >
-        <View style={[styles.item_wrap, { opacity: movedKey === item.text && !isMoved ? 1 : 1 }]}>
+        <View style={styles.item_wrap}>
           <View style={styles.item_clear_wrap}>
             <TouchableOpacity onPress={() => onDeleteItem(index!)}>
               <Image source={require('./assets/img/clear.png')} style={styles.item_clear} />
@@ -86,55 +57,55 @@ const App: React.FC = () => {
         </View>
       </TouchableOpacity>
     );
-  }, [movedKey, onDeleteItem]);
+  }, [handleLongPress, handlePressOut, onDeleteItem]);
 
   const renderHeaderView = (
     <View style={styles.aheader}>
-      <Image source={{ uri: 'https://avatars0.githubusercontent.com/u/15728691?s=460&v=4' }} style={styles.aheader_img} />
+      <Image source={{ uri: 'https://www.reuters.com/resizer/v2/OHRVOCXQWVNYDFN2BDMRNO6B3Y.jpg?auth=d966b5290f69e1623f6b1ca95c1daf490d9b3e25e11383dff6b13a999e98b0b8&width=640&quality=80' }} style={styles.aheader_img} />
       <View style={styles.aheader_context}>
-        <Text style={styles.aheader_title}>mochixuan</Text>
-        <Text style={styles.aheader_desc}>Android, React-Native, Flutter, React, Web。Learn new knowledge and share new knowledge.</Text>
+        <Text style={styles.aheader_title}>לימוד א'-ב'</Text>
+        <Text style={styles.aheader_desc}>מציירים בגיר וצבע, אלף-בית, אלף-בית... סדרו את האותיות לפי הסדר!</Text>
       </View>
     </View>
   );
 
   const renderBottomView = (
     <View style={styles.abottom}>
-      <Text style={styles.abottom_desc}>yarn add react-native-drag-sort</Text>
+      <Text style={styles.abottom_desc}>שין - שלום ותו - תודה ונגמרה העבודה!</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={styles.header}>
-        <Text style={styles.header_title}>AnySize</Text>
-      </View>
-      <AnySizeDragSortableView
-        ref={sortableViewRef}
-        dataSource={items}
-        keyExtractor={(item) => item.text}
-        renderItem={renderItem}
-        onDataChange={(data, callback) => {
-          setItems(data);
-          callback?.();
-        }}
-        renderHeaderView={renderHeaderView}
-        headerViewHeight={headerViewHeight}
-        renderBottomView={renderBottomView}
-        bottomViewHeight={bottomViewHeight}
-        movedWrapStyle={styles.item_moved}
-        onDragEnd={() => {
-          setMovedKey(null);
-        }}
-      />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <View style={styles.header}>
+          <Text style={styles.header_title}>SM-DS</Text>
+        </View>
+        <AnySizeDragSortableView
+          ref={sortableViewRef}
+          dataSource={items}
+          keyExtractor={(item) => item.text}
+          renderItem={renderItem}
+          onDataChange={(data, callback) => {
+            setItems(data);
+            callback?.();
+          }}
+          renderHeaderView={renderHeaderView}
+          headerViewHeight={headerViewHeight}
+          renderBottomView={renderBottomView}
+          bottomViewHeight={bottomViewHeight}
+          movedWrapStyle={styles.item_moved}
+          onDragEnd={onDragEnd}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
   item_wrap: {
     position: 'relative',
-    paddingLeft: 20,
+    paddingHorizontal: 10,
     paddingTop: 20
   },
   item: {
@@ -174,16 +145,19 @@ const styles = StyleSheet.create({
   },
   item_text_swipe: {
     backgroundColor: '#fff',
-    width: 56,
-    height: 30,
+    width: 140,
+    minHeight: 30,
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   item_text: {
     color: '#444',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   header: {
     height: 48,
@@ -200,7 +174,7 @@ const styles = StyleSheet.create({
   aheader: {
     height: headerViewHeight,
     flexDirection: 'row',
-    borderBottomColor: '#2ecc71',
+    borderBottomColor: '#090909ff',
     borderBottomWidth: 2,
     zIndex: 100,
     backgroundColor: '#fff'
@@ -222,12 +196,14 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 20,
     marginBottom: 10,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    textAlign: 'right',
   },
   aheader_desc: {
     color: '#444',
     fontSize: 16,
-    width: width - headerViewHeight * 0.6 - 32
+    width: width - headerViewHeight * 0.6 - 32,
+    textAlign: 'right',
   },
   abottom: {
     justifyContent: 'center',
