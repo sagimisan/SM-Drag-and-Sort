@@ -11,6 +11,15 @@ This is a modernized and optimized version of `react-native-drag-sort`, focusing
 - ✅ **RTL Support**: Native support for Hebrew and other Right-to-Left layouts.
 - ✅ **SDK Ready**: Logic separated into custom hooks (`useAnySizeDragSort`) for maximum flexibility.
 
+## Getting Started
+
+### 1. Clone the Repository
+First, clone this repository to your local machine:
+```bash
+git clone https://github.com/sagimisan/SM-Drag-and-Sort.git
+cd SM-Drag-and-Sort
+```
+
 ## Quick Start (Demo App)
 The provided demo app is fully configured and ready to go. Just run:
 
