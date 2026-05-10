@@ -266,16 +266,18 @@ export const useAnySizeDragSort = <T,>(props: UseAnySizeDragSortProps<T>, ref: R
 
     if (isStartupAuto() && curScrollData.current) {
       const curDis = selectedOriginLayout.y + dy - (autoObj.current.hasScrollDy || 0);
+      const scrollMargin = 30; // Margin from the edge to start scrolling
+      
       if (nativeEvent != null) {
         const tempStatus = autoObj.current.forceScrollStatus;
-        const minDownDiss = curDis + selectedPosition.height + headerViewHeight;
-        const maxUpDiss = curDis + headerViewHeight;
+        const minDownDiss = curDis + selectedPosition.height + headerViewHeight + scrollMargin;
+        const maxUpDiss = curDis + headerViewHeight - scrollMargin;
 
-        if ((tempStatus === 0 || tempStatus === 2) && vy > 0.01 && minDownDiss > curScrollData.current.windowHeight) {
+        if ((tempStatus === 0 || tempStatus === 2) && minDownDiss > curScrollData.current.windowHeight) {
           autoObj.current.curDy = dy;
           autoObj.current.forceScrollStatus = 1;
           startAutoScroll();
-        } else if ((tempStatus === 0 || tempStatus === -2) && -vy > 0.01 && maxUpDiss < 0) {
+        } else if ((tempStatus === 0 || tempStatus === -2) && maxUpDiss < 0) {
           autoObj.current.curDy = dy;
           autoObj.current.forceScrollStatus = -1;
           startAutoScroll();
@@ -283,9 +285,10 @@ export const useAnySizeDragSort = <T,>(props: UseAnySizeDragSortProps<T>, ref: R
       }
 
       if (vy != null) {
-        if (autoObj.current.forceScrollStatus >= 1 && -vy > 0.01) {
+        // Stop scrolling if moving in the opposite direction significantly
+        if (autoObj.current.forceScrollStatus === 1 && vy < -0.1) {
           autoObj.current.forceScrollStatus = 0;
-        } else if (autoObj.current.forceScrollStatus <= -1 && vy > 0.01) {
+        } else if (autoObj.current.forceScrollStatus === -1 && vy > 0.1) {
           autoObj.current.forceScrollStatus = 0;
         }
       }
@@ -295,7 +298,7 @@ export const useAnySizeDragSort = <T,>(props: UseAnySizeDragSortProps<T>, ref: R
       if (nativeEvent != null) {
         dy = dy + autoObj.current.scrollDy;
         if (autoObj.current.forceScrollStatus === 1 || autoObj.current.forceScrollStatus === -1) {
-          return;
+          // Allow small movement during auto-scroll
         }
       }
     }
