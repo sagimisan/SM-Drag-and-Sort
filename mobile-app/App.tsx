@@ -42,7 +42,7 @@ const App: React.FC = () => {
           <View
             style={[
               styles.item,
-              { width: item.width, height: item.height, backgroundColor: isMoved ? 'red' : '#f39c12' }
+              { width: item.width, height: item.height, backgroundColor: item.color }
             ]}
           >
             {isMoved && (
